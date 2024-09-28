@@ -1,0 +1,521 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Dashboard {% endblock %} 
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+
+    <div class="content">
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-chart">
+                    <div class="card-header ">
+                        <div class="row">
+                            <div class="col-sm-6 text-left">
+                                <h5 class="card-category">Total Shipments</h5>
+                                <select id="ticker-select" class="form-control float-right inherit-dropdown" style="width: 200px; margin-left: 10px; background-color: #1e1e2f;">
+                                    <option value="AAPL">AAPL</option>
+                                    <option value="GOOGL">GOOGL</option>
+                                    <option value="MSFT">MSFT</option>
+                                    <option value="TSLA">TSLA</option>
+                                </select>
+                                <h2 class="card-title" id="stock_val">Performance</h2>
+                                <button class="btn btn-sm btn-outline-primary create-chart-btn">Create Chart</button>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="btn-group btn-group-toggle float-right" data-toggle="buttons">
+                                    <label class="btn btn-sm btn-primary btn-simple active" id="0">
+                                        <input type="radio" name="options" checked>
+                                        <span class="d-none d-sm-block d-md-block d-lg-block d-xl-block">Chart 1y 1d</span>
+                                        <span class="d-block d-sm-none">
+                        <i class="tim-icons icon-single-02"></i>
+                    </span>
+                                    </label>
+                                    <label class="btn btn-sm btn-primary btn-simple" id="1">
+                                        <input type="radio" class="d-none d-sm-none" name="options">
+                                        <span class="d-none d-sm-block d-md-block d-lg-block d-xl-block">Chart 1mo 1d</span>
+                                        <span class="d-block d-sm-none">
+                        <i class="tim-icons icon-gift-2"></i>
+                    </span>
+                                    </label>
+                                    <label class="btn btn-sm btn-primary btn-simple" id="2">
+                                        <input type="radio" class="d-none" name="options">
+                                        <span class="d-none d-sm-block d-md-block d-lg-block d-xl-block">Chart 1d 1h</span>
+                                        <span class="d-block d-sm-none">
+                        <i class="tim-icons icon-tap-02"></i>
+                    </span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-area">
+                            <canvas id="chartBig1"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="card card-chart">
+                    <div class="card-header">
+                        <h5 class="card-category">S&P500</h5>
+                        <h3 class="card-title" id="sp500val"><i class="tim-icons icon-bell-55 text-primary sp"></i> 763,215</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-area">
+                            <canvas id="chartLinePurple"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card card-chart">
+                    <div class="card-header">
+                        <h5 class="card-category">Daily Sales</h5>
+                        <h3 class="card-title"><i class="tim-icons icon-delivery-fast text-info"></i> 3,500€</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-area">
+                            <canvas id="CountryChart"></canvas>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card card-chart">
+                    <div class="card-header">
+                        <h5 class="card-category">Completed Tasks</h5>
+                        <h3 class="card-title"><i class="tim-icons icon-send text-success"></i> 12,100K</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-area">
+                            <canvas id="chartLineGreen"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-6 col-md-12">
+                <div class="card card-tasks">
+                    <div class="card-header ">
+                        <h6 class="title d-inline">Tasks(5)</h6>
+                        <p class="card-category d-inline">today</p>
+                        <div class="dropdown">
+                            <button type="button" class="btn btn-link dropdown-toggle btn-icon"
+                                    data-toggle="dropdown">
+                                <i class="tim-icons icon-settings-gear-63"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuLink">
+                                <a class="dropdown-item" href="#pablo">Action</a>
+                                <a class="dropdown-item" href="#pablo">Another action</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body ">
+                        <div class="table-full-width table-responsive">
+                            <table class="table">
+                                <thead class=" text-primary">
+                                    <tr>
+                                        <th>
+                                            Ticker
+                                        </th>
+                                        <th>
+                                            News
+                                        </th>
+                                    </tr>
+                                    </thead>
+                                <tbody>
+                                    {% for news in news_data %}
+                                    <tr>
+                                        <td>{% if news.thumbnail %}
+                                            <img src="{{ news.thumbnail }}" alt="{{ news.title }}" width="50" height="50" style="object-fit: cover;">
+                                        {% else %}
+                                            No Image Available
+                                        {% endif %}</td>
+                                        <td><a href="{{ news.url }}" target="_blank">{{ news.title }}</α></td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="2">No news available.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 col-md-12">
+                <div class="card ">
+                    <div class="card-header">
+                        <h4 class="card-title"> Simple Table</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table tablesorter " id="">
+                                <thead class=" text-primary">
+                                <tr>
+                                    <th>
+                                        Indicator
+                                    </th>
+                                    <th>
+                                        Value
+                                    </th>
+                                    <th>
+                                        Previous Value
+                                    </th>                                    
+                                    <th>
+                                        Description
+                                    </th>
+                                    <th class="text-center">
+                                        Suggestion
+                                    </th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                    {% for key,data in macro_data.items %}
+                                <tr>
+                                    <td> <a href="{{data.url}}">
+                                        {{key}}</a>
+                                    </td>
+                                    <td> <a href="{{data.url}}">
+                                        {{data.value |default:"N/A"}}</a>
+                                    </td>
+                                    <td> <a href="{{data.url}}">
+                                        {{data.previous_value |default:"N/A"}}</a>
+                                    </td>                                    
+                                    <td> <a href="{{data.url}}">
+                                        {{data.description |default:"N/A"}}</a>
+                                    </td>
+                                    <td> <a href="{{data.url}}">
+                                        {{data.suggestion |default:"N/A"}}</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% if not macro_data %}
+                                    <tr><td colspan="5">No macroeconomic data available.</td></tr>
+                                {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}
+
+<script>
+    $(document).ready(function () {
+        // Javascript method's body can be found in assets/js/demos.js
+        demo.initDashboardPageCharts();
+
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Function to fetch country chart data
+        async function fetchCountryChartData() {
+            try {
+                const response = await fetch(`{% url 'get_CountryChart_data' %}`); // Ensure this URL is correct
+                if (!response.ok) {
+                    console.error('Network response was not ok:', response.statusText);
+                    return; // Early return if the response is not okay
+                }
+                const data = await response.json();
+                renderCountryChart(data);
+            } catch (error) {
+                console.error('Error fetching country chart data:', error);
+            }
+        }
+
+        // Function to render the Country Chart
+        function renderCountryChart(chartData) {
+            const ctx = document.getElementById('CountryChart');
+            if (!ctx) {
+                console.error('CountryChart element not found');
+                return;
+            }
+
+            // Check if chartData has the expected structure
+            if (!chartData || !Array.isArray(chartData.labels) || !Array.isArray(chartData.data)) {
+                console.error('Invalid chartData structure:', chartData);
+                return; // Exit if chartData is not valid
+            }
+
+            const countryChart = new Chart(ctx.getContext('2d'), {
+                type: 'line', // Change to desired chart type (e.g., 'line', 'bar', etc.)
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: chartData.symbol || 'Default Label',
+                        data: chartData.data,
+                        fill: true,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        pointBackgroundColor: '#d346b1',
+                        pointBorderColor: 'rgba(255,255,255,0)',
+                        pointHoverBackgroundColor: '#d346b1',
+                        borderWidth: 2,
+                        pointBorderWidth: 5,
+                        pointHoverRadius: 4,
+                        pointHoverBorderWidth: 15,
+                        pointRadius: 4,
+                    }]
+                },
+                options: gradientChartOptionsConfigurationWithTooltipPurple // Ensure this variable is defined
+            });
+        }
+
+        // Call the function to fetch and display the chart data
+        fetchCountryChartData();
+    });
+</script>
+<script>
+    $(document).ready(function () {
+        // Initialize the chart chartBig1
+        const ctx = document.getElementById('chartBig1').getContext('2d');
+        const gradientStroke = ctx.createLinearGradient(0, 230, 0, 50);
+        gradientStroke.addColorStop(1, 'rgba(72, 72, 176, 0.1)');
+        gradientStroke.addColorStop(0.2, 'rgba(66, 134, 121, 0.0)');
+        gradientStroke.addColorStop(0, 'rgba(66, 134, 121, 0.6)');
+    
+        const myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: "TimeSeries Data",
+                    fill: true,
+                    backgroundColor: gradientStroke,
+                    borderColor: '#d346b1',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#d346b1',
+                    pointBorderColor: 'rgba(255,255,255,0)',
+                    pointHoverBackgroundColor: '#d346b1',
+                    pointBorderWidth: 20,
+                    pointHoverRadius: 4,
+                    pointHoverBorderWidth: 15,
+                    pointRadius: 4,
+                    data: [],
+                }]
+            },
+            options: gradientChartOptionsConfigurationWithTooltipPurple
+        });
+    
+        let chartLinePurple;
+        let chartCountry;
+
+        function updateChartData(ticker, period, interval) {
+            fetch(`{% url 'get_chartBig1_data' %}?ticker=${ticker}&period=${period}&interval=${interval}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('Error fetching data:', data.error);
+                        return;
+                    }
+                    myChart.data.labels = data.labels;
+                    myChart.data.datasets[0].data = data.data;
+                    myChart.update();
+                    updateStockPerformance(data.ticker, data.last_price);
+                    updateChartLinePurple(ticker, period, interval);
+                    updateCountryChart(ticker, period, interval); // Ensure this is called here
+                })
+                .catch(error => console.log('Error fetching chart data:', error));
+        }
+    
+        function updateStockPerformance(symbol, last_price) {
+            const ticker = $('#ticker-select').val();
+            document.getElementById("stock_val").innerHTML = `<i class="tim-icons icon-bell-55 text-primary"></i> ${ticker} : ${last_price}`;
+        }
+    
+        const defaultTicker = $('#ticker-select option:first').val();
+        updateChartData(defaultTicker, '1y', '1d');
+        //updateChartLinePurple(defaultTicker, '1y', '1d');
+    
+        $('input[name="options"]').on('change', function () {
+            const selectedOption = $(this).parent().attr('id');
+            const ticker = $('#ticker-select').val();
+            let period, interval;
+    
+            switch (selectedOption) {
+                case '0':
+                    period = '1y';
+                    interval = '1d';
+                    break;
+                case '1':
+                    period = '1mo';
+                    interval = '1d';
+                    break;
+                case '2':
+                    period = '1d';
+                    interval = '1h';
+                    break;
+                default:
+                    period = '1y';
+                    interval = '1d';
+            }
+    
+            updateChartData(ticker, period, interval);
+        });
+    
+        $('.create-chart-btn').on('click', function () {
+            const activeRadio = $('.btn-group-toggle .btn.active');
+            const selectedOption = activeRadio.attr('id');
+            const ticker = $('#ticker-select').val();
+            let period, interval;
+    
+            switch (selectedOption) {
+                case '0':
+                    period = '1y';
+                    interval = '1d';
+                    break;
+                case '1':
+                    period = '1mo';
+                    interval = '1d';
+                    break;
+                case '2':
+                    period = '1d';
+                    interval = '1h';
+                    break;
+                default:
+                    period = '1y';
+                    interval = '1d';
+            }
+    
+            $.ajax({
+                url: '/create_charts/',
+                type: 'GET',
+                data: {
+                    ticker: ticker,
+                    period: period,
+                    interval: interval,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: function (response) {
+                    updateStockPerformance(response.ticker, response.last_price);
+                    console.log(response);
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error:', error);
+                }
+            });
+        });
+    
+        $('#ticker-select').on('change', function () {
+            const selectedTicker = $(this).val();
+            const selectedOption = $('.btn-group-toggle .btn.active').attr('id');
+            let period, interval;
+    
+            switch (selectedOption) {
+                case '0':
+                    period = '1y';
+                    interval = '1d';
+                    break;
+                case '1':
+                    period = '1mo';
+                    interval = '1d';
+                    break;
+                case '2':
+                    period = '1d';
+                    interval = '1h';
+                    break;
+                default:
+                    period = '1y';
+                    interval = '1d';
+            }
+    
+            updateChartData(selectedTicker, period, interval);
+        });
+    
+        function updateChartLinePurple(ticker, period, interval) {
+            fetch(`{% url 'get_chartpurple_data' %}?ticker=${ticker}&period=${period}&interval=${interval}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('Error fetching data for chartLinePurple:', data.error);
+                        return;
+                    }
+                    document.getElementById("sp500val").innerHTML = `<i class="tim-icons icon-bell-55 text-primary sp"></i> ${data.last_price}`;
+                    if (!chartLinePurple) {
+                        const purpleChart = document.getElementById('chartLinePurple').getContext('2d');
+                        chartLinePurple = new Chart(purpleChart, {
+                            type: 'line',
+                            data: {
+                                labels: data.labels,
+                                datasets: [{
+                                    label: "Close Prices",
+                                    backgroundColor: 'rgba(66, 134, 121, 0.6)',
+                                    borderColor: '#d346b1',
+                                    data: data.data,
+                                }]
+                            },
+                            options: gradientChartOptionsConfigurationWithTooltipPurple
+                        });
+                    } else {
+                        chartLinePurple.data.labels = data.labels;
+                        chartLinePurple.data.datasets[0].data = data.data;
+                        chartLinePurple.update();
+                    }
+                })
+                .catch(error => console.log('Error fetching chartLinePurple data:', error));
+        }
+    
+        function updateCountryChart(ticker, period, interval) {
+            fetch(`{% url 'get_CountryChart_data' %}?ticker=${ticker}&period=${period}&interval=${interval}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Fetched data:', data);  // Log the fetched data for debugging
+                if (data.error) {
+                    console.error('Error fetching data for chartCountry:', data.error);
+                    return;
+                }
+                if (!CountryChart) {
+                    const CountryChartline = document.getElementById('CountryChart').getContext('2d');                    
+                    CountryChart = new Chart(CountryChartline, {
+                        type: 'line',
+                        data: {
+                            labels: data.labels,
+                            datasets: [{
+                                label: "Close Prices",
+                                backgroundColor: 'rgba(66, 134, 121, 0.6)',
+                                borderColor: '#d346b1',
+                                data: data.data,  // Should now be an array of numbers
+                            }]
+                        },
+                        options: gradientChartOptionsConfigurationWithTooltipPurple
+                    });
+                } else {
+                    CountryChart.data.labels = data.labels;
+                    CountryChart.data.datasets[0].data = data.data;  // Update with the new data
+                    CountryChart.update();
+                }
+            })
+            .catch(error => console.log('Error fetching CountryChart data:', error));
+        }
+    });
+    
+    
+</script>
+
+
+
+
+
+
+
+
+
+
+{% endblock javascripts %}

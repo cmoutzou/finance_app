@@ -1,0 +1,15 @@
+Django>=4.0
+requests
+textblob
+beautifulsoup4
+seaborn
+statsmodels
+yfinance
+fredapi
+matplotlib
+scikit-learn
+keras
+vaderSentiment
+plotly
+tensorflow
+whitenoise
