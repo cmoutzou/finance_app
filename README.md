@@ -1,236 +1,133 @@
-<<<<<<< HEAD
-# [Black Dashboard Django](https://www.creative-tim.com/product/black-dashboard-django) [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social&logo=twitter)](https://twitter.com/home?status=Material%20Dashboard,%20a%20free%20Material%20Bootstrap%204%20Admin%20Template%20%E2%9D%A4%EF%B8%8F%20https%3A//bit.ly/2Lyat1Y%20%23bootstrap%20%23material%20%23design%20%23developers%20%23freebie%20%20via%20%40CreativeTim)
+Finance App - Stock Market Analysis and Prediction
 
- ![version](https://img.shields.io/badge/version-1.0.1-blue.svg) [![GitHub issues open](https://img.shields.io/github/issues/creativetimofficial/black-dashboard-django.svg?maxAge=2592000)](https://github.com/creativetimofficial/black-dashboard-django/issues?q=is%3Aopen+is%3Aissue) [![GitHub issues closed](https://img.shields.io/github/issues-closed-raw/creativetimofficial/black-dashboard-django.svg?maxAge=2592000)](https://github.com/creativetimofficial/black-dashboard-django/issues?q=is%3Aissue+is%3Aclosed) [![Join the chat at https://gitter.im/NIT-dgp/General](https://badges.gitter.im/NIT-dgp/General.svg)](https://gitter.im/creative-tim-general/Lobby) [![Chat](https://img.shields.io/badge/chat-on%20discord-7289da.svg)](https://discord.gg/E4aHAQy)
+Overview
+This is a Django-based web application designed to provide a comprehensive platform for stock market analysis. It integrates financial indicators, news sentiment analysis, macroeconomic data, and machine learning models to give users detailed insights into market trends and potential investment opportunities.
 
-Open-source **[Django Template](https://www.creative-tim.com/templates/django)** crafted on top of **Black Dashboard**, a popular Bootstrap 4 design. Start your development with a modern, dark-themed Bootstrap 4 Admin template for Django. It features a huge number of components built to fit together and look fantastic. 
+Features
 
-- ✅ `Up-to-date dependencies`
-- ✅ Database: `sqlite`
-- ✅ UI-Ready app, Django Native ORM
-- ✅ `Session-Based authentication`, Forms validation
-- 🚀 [PRO Version](https://www.creative-tim.com/product/black-dashboard-pro-django) - Superior UI, CI/CD and premium support
+Stock Data and News: Fetches stock data from Yahoo Finance and provides up-to-date news and sentiment analysis.
+Technical Indicators: Calculates popular financial indicators such as SMA (Simple Moving Average), RSI (Relative Strength Index), MACD (Moving Average Convergence Divergence), Bollinger Bands, and ATR (Average True Range) for stock analysis.
 
-<br />
+Macroeconomic Analysis: Integrates macroeconomic data from the Federal Reserve Economic Data (FRED) to provide insights into GDP, inflation rates, unemployment, interest rates, and consumer confidence.
 
-[![Black Dashboard Django - Admin Dashboard coded in Django.](https://user-images.githubusercontent.com/51070104/214890715-43a927f1-afea-4f09-9da8-965ba8102b07.png)](https://www.creative-tim.com/product/black-dashboard-django)
+Sentiment Analysis: Analyzes news articles using TextBlob and VaderSentiment to determine sentiment polarity (positive, negative, neutral).
 
-<br />
+Predictive Modeling: Implements stock price prediction using ARIMA, Linear Regression, and LSTM (Long Short-Term Memory) models.
 
-## Table of Contents
+Portfolio Management: Tracks the user's portfolio performance in real-time and updates hourly.
 
-* [Demo](#demo)
-* [Quick Start](#quick-start)
-* [Documentation](#documentation)
-* [File Structure](#file-structure)
-* [Browser Support](#browser-support)
-* [Resources](#resources)
-* [Reporting Issues](#reporting-issues)
-* [Technical Support or Questions](#technical-support-or-questions)
-* [Licensing](#licensing)
-* [Useful Links](#useful-links)
+Interactive Charts: Visualizes stock data, market indicators, and predictions using Plotly and Matplotlib.
 
-<br />
 
-## Demo
+Technologies Used
 
-> To authenticate use the default credentials ***test / ApS12_ZZs8*** or create a new user on the **registration page**.
-
-- **Black Dashboard Django** [Login Page](https://www.creative-tim.com/live/black-dashboard-django)
-
-<br />
-
-## Quick start
-
-> UNZIP the sources or clone the repository. After getting the code, open a terminal and navigate to the working directory, with product source code.
-
-```bash
-$ git clone https://github.com/app-generator/django-black-dashboard.git
-$ cd django-black-dashboard
-```
-
-<br />
-
-### 👉 Set Up for `Unix`, `MacOS` 
-
-> Install modules via `VENV`  
+Backend:
+Django: A high-level Python web framework for rapid development and clean, pragmatic design.
+Celery: For asynchronous task processing, used to handle tasks like updating portfolio performance or fetching large datasets.
+Statsmodels: For time series forecasting, particularly using ARIMA models.
+Keras: For implementing LSTM-based machine learning models to predict stock prices.
+Scikit-learn: For data preprocessing (e.g., MinMaxScaler) and implementing linear regression models.
+Pandas: For data manipulation and analysis.
+NumPy: For numerical computing and working with arrays.
+TextBlob: For basic sentiment analysis.
+VaderSentiment: A more specialized sentiment analysis tool for analyzing financial news articles.
+Requests: For making HTTP requests to external APIs, such as the News API.
+BeautifulSoup: For web scraping and parsing HTML to extract relevant news data.
 
-```bash
-$ virtualenv env
-$ source env/bin/activate
-$ pip3 install -r requirements.txt
-```
-
-<br />
-
-> Set Up Database
-
-```bash
-$ python manage.py makemigrations
-$ python manage.py migrate
-```
+Frontend:
+Open-source **[Django Template](https://www.creative-tim.com/templates/django)** crafted on top of **Black Dashboard**, a 
+Plotly: For creating interactive and visually appealing charts for financial data.
+Matplotlib: For static charts, used alongside Seaborn for more complex visualizations.
+Django Templates: To render the HTML pages dynamically with data passed from the backend.
 
-<br />
+Database:
+PostgreSQL: A powerful, open-source object-relational database system for storing portfolio data and stock market indicators.
+Django ORM: For interacting with the database and managing models.
 
-> Start the app
+API Integration:
+Yahoo Finance API: Used to fetch historical and real-time stock data.
+FRED API: Provides access to macroeconomic data like GDP, CPI, unemployment rate, etc.
+News API: Fetches news articles for sentiment analysis.
 
-```bash
-$ python manage.py runserver
-```
+Setup
+Prerequisites
+Python 3.8 or higher
+Django 3.2 or higher
+PostgreSQL (for database setup)
+Virtual environment (recommended for project isolation)
+Installation Steps
 
-At this point, the app runs at `http://127.0.0.1:8000/`. 
 
-> Note: To use the app, please access the registration page and create a new user. After authentication, the app will unlock the private pages.
+Clone the repository:
 
-<br />
+git clone https://github.com/yourusername/finance_app.git
+cd finance_app
 
-## Documentation
+Create a virtual environment:
 
-The documentation for the **Black Dashboard Django** is hosted at our [website](https://demos.creative-tim.com/black-dashboard-django/docs/1.0/getting-started/getting-started-django.html).
+python3 -m venv venv
+source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 
-<br />
+Install the required packages:
+pip install -r requirements.txt
 
-## File Structure
-Within the download you'll find the following directories and files:
+Set up the database (PostgreSQL):
 
-```bash
-< PROJECT ROOT >
-   |
-   |-- core/                               # Implements app configuration
-   |    |-- settings.py                    # Defines Global Settings
-   |    |-- wsgi.py                        # Start the app in production
-   |    |-- urls.py                        # Define URLs served by all apps/nodes
-   |
-   |-- apps/
-   |    |
-   |    |-- home/                          # A simple app that serve HTML files
-   |    |    |-- views.py                  # Serve HTML pages for authenticated users
-   |    |    |-- urls.py                   # Define some super simple routes  
-   |    |
-   |    |-- authentication/                # Handles auth routes (login and register)
-   |    |    |-- urls.py                   # Define authentication routes  
-   |    |    |-- views.py                  # Handles login and registration  
-   |    |    |-- forms.py                  # Define auth forms (login and register) 
-   |    |
-   |    |-- static/
-   |    |    |-- <css, JS, images>         # CSS files, Javascripts files
-   |    |
-   |    |-- templates/                     # Templates used to render pages
-   |         |-- includes/                 # HTML chunks and components
-   |         |    |-- navigation.html      # Top menu component
-   |         |    |-- sidebar.html         # Sidebar component
-   |         |    |-- footer.html          # App Footer
-   |         |    |-- scripts.html         # Scripts common to all pages
-   |         |
-   |         |-- layouts/                   # Master pages
-   |         |    |-- base-fullscreen.html  # Used by Authentication pages
-   |         |    |-- base.html             # Used by common pages
-   |         |
-   |         |-- accounts/                  # Authentication pages
-   |         |    |-- login.html            # Login page
-   |         |    |-- register.html         # Register page
-   |         |
-   |         |-- home/                      # UI Kit Pages
-   |              |-- index.html            # Index page
-   |              |-- 404-page.html         # 404 page
-   |              |-- *.html                # All other pages
-   |
-   |-- requirements.txt                     # Development modules - SQLite storage
-   |
-   |-- .env                                 # Inject Configuration via Environment
-   |-- manage.py                            # Start the app - Django default start script
-   |
-   |-- ************************************************************************
-```
-
-<br />
-
-> The bootstrap flow
-
-- Django bootstrapper `manage.py` uses `core/settings.py` as the main configuration file
-- `core/settings.py` loads the app magic from `.env` file
-- Redirect the guest users to Login page
-- Unlock the pages served by *app* node for authenticated users
-
-<br />
-
-## Resources
-
-- Demo: <https://www.creative-tim.com/live/black-dashboard-django>
-- Download Page: <https://www.creative-tim.com/product/black-dashboard-django>
-- Documentation: <https://demos.creative-tim.com/black-dashboard-django/docs/1.0/getting-started/getting-started-django.html>
-- License Agreement: <https://www.creative-tim.com/license>
-- Support: <https://www.creative-tim.com/contact-us>
-- Issues: [Github Issues Page](https://github.com/creativetimofficial/black-dashboard-django/issues)
-
-<br />
-
-## Reporting Issues
-
-We use GitHub Issues as the official bug tracker for the **Black Dashboard Django**. Here are some advices for our users that want to report an issue:
-
-1. Make sure that you are using the latest version of the **Black Dashboard Django**. Check the CHANGELOG from your dashboard on our [website](https://www.creative-tim.com/).
-2. Providing us reproducible steps for the issue will shorten the time it takes for it to be fixed.
-3. Some issues may be browser-specific, so specifying in what browser you encountered the issue might help.
-
-<br />
-
-## Technical Support or Questions
-
-If you have questions or need help integrating the product please [contact us](https://www.creative-tim.com/contact-us) instead of opening an issue.
-
-<br />
-
-## Licensing
-
-- Copyright 2019 - present [Creative Tim](https://www.creative-tim.com/)
-- Licensed under [Creative Tim EULA](https://www.creative-tim.com/license)
-
-<br />
-
-## Useful Links
-
-- [More products](https://www.creative-tim.com/bootstrap-themes) from Creative Tim
-- [Tutorials](https://www.youtube.com/channel/UCVyTG4sCw-rOvB9oHkzZD1w)
-- [Freebies](https://www.creative-tim.com/bootstrap-themes/free) from Creative Tim
-- [Affiliate Program](https://www.creative-tim.com/affiliates/new) (earn money)
-
-<br />
-
-## Social Media
-
-- Twitter: <https://twitter.com/CreativeTim>
-- Facebook: <https://www.facebook.com/CreativeTim>
-- Dribbble: <https://dribbble.com/creativetim>
-- Instagram: <https://www.instagram.com/CreativeTimOfficial>
-
-<br />
-
-## [PRO Version](https://www.creative-tim.com/product/black-dashboard-pro-django)
-
-> For more components, pages and priority on support, feel free to take a look at this amazing starter:
-
-Black Dashboard is a premium [Bootstrap](https://www.admin-dashboards.com/bootstrap-5-templates/) Design now available for download in Django. Made of hundred of elements, designed blocks, and fully coded pages, Black Dashboard PRO is ready to help you create stunning websites and web apps.
-
-- ✅ `Up-to-date Dependencies`
-- ✅ `Design`: [Django Theme Black](https://github.com/app-generator/django-admin-black-pro) - `PRO Version`
-- ✅ `Sections` covered by the design:
-  - ✅ **Admin section** (reserved for superusers)
-  - ✅ **Authentication**: `Django.contrib.AUTH`, Registration
-  - ✅ **All Pages** available in for ordinary users 
-- ✅ `Docker`
-- 🚀 `Deployment` 
-  - `CI/CD` flow via `Render`
-
-<br />
-
-![Django Black Dashboard PRO - Premium Starter crafted by AppSeed and Creative-Tim.](https://user-images.githubusercontent.com/51070104/214872728-230a9955-d391-4900-b352-d68960dbd2c4.png)
-
-<br />
-
----
-[Black Dashboard Django](https://www.creative-tim.com/product/black-dashboard-django) - Provided by [Creative Tim](https://www.creative-tim.com/) and [AppSeed](https://appseed.us).
-=======
-# finance_app
-A Python project for analyzing stock market trends using historical data. Includes data processing, visualization, and basic predictive analytics.
->>>>>>> 5e81c22f4be0a90683daed198fa37196b82ecc8a
+Create a new database (e.g., finance_app).
+Update the DATABASES settings in settings.py with your database credentials.
+
+Apply migrations to create the database schema: 
+python manage.py migrate
+Create a superuser to access the Django admin panel:
+bash
+ 
+python manage.py createsuperuser
+Run the development server:
+bash
+ 
+python manage.py runserver
+Visit http://127.0.0.1:8000 in your browser to access the application.
+
+Application Flow
+Dashboard (index view)
+The main page of the app fetches real-time stock data, calculates technical indicators, performs macroeconomic analysis, and shows sentiment analysis from the latest news. The data is then rendered in the dashboard with interactive charts.
+
+Sentiment Analysis
+The app fetches news related to the selected stock symbol using the News API. Sentiment analysis is performed using TextBlob and VaderSentiment. The sentiment scores (positive, neutral, negative) are displayed alongside news articles.
+
+Financial Indicators
+Technical indicators such as Moving Averages, RSI, MACD, Bollinger Bands, and ATR are calculated using historical stock data and displayed to the user to assist with decision-making.
+
+Predictive Models
+Stock price predictions are made using ARIMA and LSTM models. These models predict future price movements based on historical data and display the results in an interactive chart.
+
+Macroeconomic Analysis
+Economic indicators like GDP, CPI, PPI, unemployment rate, and consumer confidence are fetched from the FRED API. The app analyzes these indicators and provides a macroeconomic suggestion based on the current data.
+
+Portfolio Management
+Users can track their portfolios, with the app updating performance in real-time. Portfolio data is fetched and updated hourly.
+
+Example of Key Functions
+fetch_news_sentiment(symbol)
+Fetches stock-related news and analyzes the sentiment of the titles using TextBlob and VaderSentiment. Returns the dominant sentiment (positive, negative, neutral).
+
+calculate_indicators(df)
+Calculates various financial indicators (SMA, RSI, MACD, Bollinger Bands, ATR) from the stock's historical data stored in a Pandas DataFrame.
+
+analyze_macroeconomic_data()
+Fetches macroeconomic data from FRED (GDP, CPI, unemployment rate, etc.) and returns analysis with suggestions based on the data.
+
+predict_stock_price()
+Uses ARIMA and LSTM models to predict future stock prices based on historical data. The predictions are visualized using Plotly.
+
+Running Background Tasks with Celery
+The app uses Celery to handle background tasks like updating portfolio performance and fetching stock data at regular intervals. This ensures the main application remains responsive while heavy computations are offloaded.
+
+
+Future Enhancements
+Real-time data updates: Implement WebSocket-based updates for real-time stock data.
+Extended machine learning models: Incorporate additional models like XGBoost, Prophet, or Reinforcement Learning for stock price predictions.
+User authentication and portfolio management: Extend user authentication and allow users to manage their stock portfolios more effectively.
+Mobile app support: Provide a mobile-friendly version or create a mobile app for easier access to stock analysis.
+Contributions
+Feel free to fork the repository and submit pull requests. Contributions in the form of bug fixes, new features, or improvements are always welcome.
