@@ -1,0 +1,315 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Dashboard {% endblock %} 
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.8.0/chart.min.css">
+{% endblock stylesheets %}
+
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center">My Portfolio</h1>
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Total Portfolio Value: ${{ total_value }}</h3>
+            <h4>Total Profit/Loss: 
+                <span class="{% if total_profit_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    ${{ total_profit_loss }}
+                </span>
+            </h4>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="/add_transaction.html" class="btn btn-primary">Add Transaction</a>
+        </div>
+    </div>
+    <table class="table table-dark table-striped mt-4">
+        <thead>
+            <tr>
+                <th>Symbol</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Quantity</th>
+                <th>Buy Price (Avg.)</th>
+                <th>Market Price (Cur.)</th>
+                <th>Total Value</th>
+                <th>Profit/Loss</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in portfolio %}
+            <tr>
+                <td><a href="#" class="ticker-link" data-ticker="{{ item.ticker }}">{{ item.ticker }}</a></td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.asset_type }}</td>
+                <td>{{ item.total_quantity }}</td>
+                <td>{{ item.average_buy_price }}</td>
+                <td>{{ item.current_market_price }}</td>
+                <td>{{ item.current_value }}</td>
+                <td>{{ item.profit_loss }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8">No portfolio data available.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="row mt-5">
+        <!-- Asset Type Percentage Chart -->
+        <div class="col-md-6">
+            <h4 class="text-center">Asset Type Distribution</h4>
+            <canvas id="assetTypeChart"></canvas>
+        </div>
+        <!-- Portfolio Performance Chart -->
+        <div class="col-md-6">
+            <h4 class="text-center">Portfolio Performance</h4>
+            <canvas id="performanceChart"></canvas>
+        </div>
+    </div>
+    <div class="row mt-5">
+        <!-- Asset Category Performance Chart -->
+        <div class="col-md-12">
+            <h4 class="text-center">Asset Category Performance</h4>
+            <canvas id="categoryPerformanceChart"></canvas>
+        </div>
+    </div>
+{% endblock content %}
+
+{% block javascripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.8.0/chart.min.js"></script>
+
+<script>
+    let chartAsset;
+    let performanceChart;
+
+    function updateCharts() {
+        console.log('Fetching data for charts...');
+        fetch(`{% url 'portfolio_data' %}`)
+            .then(response => {
+                console.log('Response received:', response);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Data received:', data); // Debug statement
+                if (data.error) {
+                    console.error('Error fetching data for charts:', data.error);
+                    return;
+                }
+
+                // Update Asset Type Chart
+                if (!chartAsset) {
+                    const purpleChart = document.getElementById('assetTypeChart').getContext('2d');
+                    chartAsset = new Chart(purpleChart, {
+                        type: 'pie',
+                        data: {
+                            labels: data.asset_types,
+                            datasets: [{
+                                label: "Asset Distribution",
+                                backgroundColor: ['rgba(66, 134, 121, 0.6)', 'rgba(66, 134, 221, 0.6)', 'rgba(221, 134, 121, 0.6)'],
+                                borderColor: '#d346b1',
+                                data: data.asset_percentages,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                tooltip: {
+                                    mode: 'index',
+                                    intersect: false,
+                                },
+                                legend: {
+                                    display: true,
+                                }
+                            },
+                            hover: {
+                                mode: 'nearest',
+                                intersect: true
+                            },
+                        }
+                    });
+                } else {
+                    chartAsset.data.labels = data.asset_types;
+                    chartAsset.data.datasets[0].data = data.asset_percentages;
+                    chartAsset.update();
+                }
+
+                // Update Performance Chart
+                if (!performanceChart) {
+                    const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+                    performanceChart = new Chart(performanceCtx, {
+                        type: 'line',
+                        data: {
+                            labels: data.performance_dates,
+                            datasets: [{
+                                label: "Portfolio Performance",
+                                backgroundColor: 'rgba(66, 134, 221, 0.6)',
+                                borderColor: '#4286f4',
+                                data: data.performance_values,
+                                fill: false,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                tooltip: {
+                                    mode: 'index',
+                                    intersect: false,
+                                },
+                                legend: {
+                                    display: true,
+                                }
+                            },
+                            hover: {
+                                mode: 'nearest',
+                                intersect: true
+                            },
+                            scales: {
+                                x: {
+                                    display: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Dates'
+                                    }
+                                },
+                                y: {
+                                    display: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Values'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    performanceChart.data.labels = data.performance_dates;
+                    performanceChart.data.datasets[0].data = data.performance_values;
+                    performanceChart.update();
+                }
+            })
+            .catch(error => console.log('Error fetching chart data:', error));
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOMContentLoaded event fired'); // Debug statement
+        updateCharts();
+    });
+</script>
+
+<script>
+    let categoryPerformanceChart;
+
+function updateCategoryPerformanceChart() {
+    fetch("{% url 'asset_category_performance_data' %}")
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('categoryPerformanceChart').getContext('2d');
+            
+            if (!categoryPerformanceChart) {
+                categoryPerformanceChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: []
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: true },
+                            tooltip: { mode: 'index', intersect: false }
+                        },
+                        hover: { mode: 'nearest', intersect: true },
+                        scales: {
+                            x: { display: true, title: { display: true, text: 'Dates' } },
+                            y: { display: true, title: { display: true, text: 'Value ($)' } }
+                        }
+                    }
+                });
+            }
+
+            const labels = [...new Set(Object.values(data.performance_data).flatMap(item => item.dates))];
+            categoryPerformanceChart.data.labels = labels;
+
+            categoryPerformanceChart.data.datasets = Object.keys(data.performance_data).map(assetType => ({
+                label: assetType,
+                data: data.performance_data[assetType].values,
+                fill: false,
+                borderColor: getRandomColor(),
+                backgroundColor: getRandomColor(),
+                tension: 0.4
+            }));
+
+            categoryPerformanceChart.update();
+        })
+        .catch(error => console.error("Error fetching performance data:", error));
+}
+
+function getRandomColor() {
+    const r = Math.floor(Math.random() * 255);
+    const g = Math.floor(Math.random() * 255);
+    const b = Math.floor(Math.random() * 255);
+    return `rgba(${r}, ${g}, ${b}, 0.6)`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateCategoryPerformanceChart();
+});
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Attach click event to ticker links
+        document.querySelectorAll('.ticker-link').forEach(function(link) {
+            link.addEventListener('click', function(event) {
+                event.preventDefault(); // Prevent default link behavior
+                const ticker = this.getAttribute('data-ticker');
+                fetchChartData(ticker);
+            });
+        });
+    });
+
+    function fetchChartData(ticker) {
+        const url = `/create_charts_p/${ticker}/`; // Update this if your URL is different
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error fetching chart data:', data.error);
+                    return;
+                }
+
+                // Display chart or handle the data as needed
+                displayChart(data);
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function displayChart(data) {
+        // Logic to display the chart
+        // Assuming you are using Plotly or another library
+        const chartContainer = document.createElement('div');
+        chartContainer.innerHTML = `
+            <div class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeModal()">&times;</span>
+                    <div id="chartDiv"></div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(chartContainer);
+
+        // Example using Plotly
+        Plotly.newPlot('chartDiv', data.traces, data.layout);
+    }
+
+    function closeModal() {
+        document.querySelector('.modal').remove();
+    }
+</script>
+
+
+
+{% endblock javascripts %}

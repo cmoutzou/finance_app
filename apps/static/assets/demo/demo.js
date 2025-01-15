@@ -359,6 +359,7 @@ demo = {
     gradientStroke.addColorStop(0.2, 'rgba(72,72,176,0.0)');
     gradientStroke.addColorStop(0, 'rgba(119,52,169,0)'); //purple colors
 
+    /*
     var data = {
       labels: ['JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'],
       datasets: [{
@@ -379,7 +380,7 @@ demo = {
         data: [80, 100, 70, 80, 120, 80],
       }]
     };
-
+*/
     var myChart = new Chart(ctx, {
       type: 'line',
       data: data,
@@ -467,7 +468,7 @@ demo = {
     };
 
 
-
+/*
     var myChartData = new Chart(ctx, config);
     $("#0").click(function() {
       var data = myChartData.config.data;
@@ -491,7 +492,7 @@ demo = {
       myChartData.update();
     });
 
-
+*/
     var ctx = document.getElementById("CountryChart").getContext("2d");
 
     var gradientStroke = ctx.createLinearGradient(0, 230, 0, 50);

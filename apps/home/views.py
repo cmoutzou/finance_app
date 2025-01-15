@@ -2,11 +2,16 @@
 """
 Copyright (c) 2019 - present AppSeed.us
 """
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from .forms import *
 from django import template
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.template import loader
 from django.urls import reverse
+from .forms import *
+from .models import *
 import requests
 from textblob import TextBlob
 from bs4 import BeautifulSoup
@@ -31,16 +36,38 @@ from sklearn.preprocessing import MinMaxScaler
 import io
 from contextlib import contextmanager
 from datetime import datetime
+import pmdarima as pm
+from django.shortcuts import render, redirect
+from .models import *
+from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError
+from django.conf import settings
+print(settings.DATABASES)
+from django.db import connection
+print(connection.settings_dict)
+import logging
+logger = logging.getLogger(__name__)
+import yfinance as yf
+from celery import shared_task
+from .models import Portfolio
+from decimal import Decimal
+from .tasks import *
+
+
 
 
   # You can dynamically set this symbol
 
 @login_required(login_url="/login/")
 def index(request):
+    update_portfolio_performance()
+    hourly_portfolio_snapshot()
+    
     symbol = get_ticker(request)
     news_data = fetch_news(symbol)
     data=fetch_data_from_yf(symbol)
     data=calculate_indicators(data)
+    explanations=explain_indicators(data)
     macro_data,macro_suggestion=analyze_macroeconomic_data()
 
     context = {
@@ -49,6 +76,7 @@ def index(request):
         'data': data,
         'macro_data': macro_data,
         'macro_suggestion': macro_suggestion,
+        'explanations':explanations
     }
 
     html_template = loader.get_template('home/index.html')
@@ -113,12 +141,51 @@ def fetch_data_from_yf(symbol,period='1y',interval='1d'):
             'Volume': 'volume'
         }, inplace=True)
 
+        def fetch_pe_ratio(symbol):
+            stock = yf.Ticker(symbol)
+            try:
+                info = stock.info
+                pe_ratio = info.get('forwardEps') / info.get('currentPrice') if info.get('currentPrice') else None
+                return pe_ratio
+            except Exception as e:
+                print(f"Error fetching P/E ratio for {symbol}: {e}")
+                return None
+
+        df['pe-ratio']=fetch_pe_ratio(symbol)
+
         return df
     except Exception as e:
         print(f"Error fetching data from Yahoo Finance for {symbol}: {e}")
         return None
   
-    
+
+def fetch_data_from_yf_pred(symbol,period='1y',interval='1d'):
+    try:
+        # Download data from Yahoo Finance
+        df = yf.download(symbol, interval=interval, period=period, progress=False)
+        if df.empty:
+            print(f"No data returned for {symbol}")
+            return None
+
+        df['symbol'] = symbol
+        df['Return'] = df['Adj Close'].pct_change()
+
+        # Ensure the index is a DatetimeIndex and reset it into a column
+        df.reset_index(inplace=True)  # Reset index to make 'Date' a column
+        
+        # Ensure the 'timestamp' is correctly renamed and in datetime format
+        df.rename(columns={'Date': 'timestamp'}, inplace=True)
+
+        # Convert 'timestamp' column to datetime, in case it's not in the right format
+        df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
+
+        # Drop rows where 'timestamp' could not be parsed
+        df.dropna(subset=['timestamp'], inplace=True)
+
+        return df
+    except Exception as e:
+        print(f"Error fetching data from Yahoo Finance for {symbol}: {e}")
+        return None    
 
 # News Sensitivity Analysis
 def fetch_news(symbol):
@@ -453,8 +520,8 @@ def get_chartpurple_data(request):
         return JsonResponse({'error': str(e)}, status=500)    
 
 def create_charts(request):
-    period = request.GET.get('period')
-    interval = request.GET.get('interval')
+    period = request.GET.get('period', '1y')
+    interval = request.GET.get('interval', '1d')
     symbol = request.GET.get('ticker', 'GOOGL')
     data = fetch_data_from_yf(symbol, period, interval)
     if data is None or data.empty:
@@ -581,8 +648,11 @@ def lstm_model(stock_data):
     return stock_data,  lstm_predictions
 
 
-def plot_prediction(symbol):
-    stock_data = fetch_data_from_yf('AAPL', period='1y', interval='1d')
+def plot_prediction(request):
+    period = request.GET.get('period')
+    interval = request.GET.get('interval')
+    symbol = request.GET.get('ticker', 'GOOGL')
+    stock_data = fetch_data_from_yf(symbol='AAPL', period='1y', interval='1d')
     stock_data,  lstm_predictions = lstm_model(stock_data)
     stock_data, arima_result = arima_model(stock_data)
     train_size = int(len(stock_data) * 0.8)
@@ -702,13 +772,476 @@ def get_CountryChart_data(request):
         return JsonResponse({'error': str(e)}, status=500)
     
 '''
-def get_CountryChart_data(request):
+def get_predictions(request):
+    # Fetch stock data
+    symbol = 'AAPL'  # Example stock symbol, you can make it dynamic
+    period = '1y'
+    interval = '1d'
+    stock_data = fetch_data_from_yf_predic(symbol, period, interval)
 
-    ########################
-    # Prepare the chart data
-    chart_data = {
-        'symbol': 'C-C',
-        'labels': ['A','B','C','D','E','F'],
-        'data': [100,200,300,400,50,60,700,80,90],
+    # Apply ARIMA model
+    stock_data, arima_predictions = arima_model(stock_data)
+
+    # Apply LSTM model
+    stock_data, lstm_predictions = lstm_model(stock_data)
+
+    # Prepare data for response
+    data = {
+        'arima_predictions': stock_data['ARIMA_Prediction'].dropna().tolist(),
+        'lstm_predictions': stock_data['LSTM_Prediction'].dropna().tolist(),
     }
-    return JsonResponse(chart_data)
+
+    return JsonResponse(data)
+
+
+def get_CountryChart_data(request):
+    try:
+        symbol = request.GET.get('ticker', 'AAPL')  # Default to 'AAPL'
+        period = request.GET.get('period', '1y')  # Default to '1y'
+        interval = request.GET.get('interval', '1mo')  # Default to '1mo'
+            
+        # Fetch data
+        stock_data = fetch_data_from_yf_predic(symbol, period, interval)
+        stock_data.index = pd.to_datetime(stock_data.index, errors='coerce')  # Ensure datetime index
+
+        # Add empty LSTM_Prediction column
+        stock_data.loc[:, 'LSTM_Prediction'] = np.nan
+
+        # LSTM and ARIMA model predictions
+        stock_data, lstm_predictions = lstm_model(stock_data)
+        stock_data, arima_result = arima_model(stock_data)
+
+        # Log the length of stock data and predictions
+        print(f"Length of stock_data: {len(stock_data)}")
+        print(f"Length of LSTM predictions: {len(lstm_predictions)}")
+
+        # Add ARIMA predictions
+        stock_data.loc[:, 'ARIMA_Prediction'] = arima_result.predict_in_sample(dynamic=False)
+        stock_data.set_index('timestamp', inplace=True)  # Replace 'date_column' with your actual date column name
+
+
+        train_size = int(len(stock_data) * 0.8)
+        train_data = stock_data[:train_size]
+
+        # ARIMA future predictions
+        future_steps = len(stock_data) - train_size
+        arima_future_pred = arima_result.predict(n_periods=future_steps)
+
+        # Log the length of ARIMA future predictions
+        print(f"Length of ARIMA future predictions: {len(arima_future_pred)}")
+        
+        # Prepare future DataFrame with ARIMA and LSTM predictions
+        future_dates = pd.date_range(start=stock_data.index[-1] + pd.Timedelta(days=1), periods=future_steps, freq='D')
+        future_df = pd.DataFrame({
+            'Date': future_dates,
+            'ARIMA_Prediction': arima_future_pred,
+            'LSTM_Prediction': lstm_predictions.flatten()[:future_steps] if lstm_predictions.size >= future_steps else np.full(future_steps, np.nan)
+        })
+
+        # Check if the future dataframe was created properly
+        print(f"Future DataFrame created with {len(future_df)} rows.")
+
+        # Convert 'Date' to proper datetime format for chart labels
+        future_df['Date'] = pd.to_datetime(future_df['Date'], errors='coerce')
+        labels = future_df['Date'].dt.strftime('%d/%m/%Y').tolist()  # Use .dt for datetime functions
+        arima = future_df['ARIMA_Prediction'].tolist()  # Ensure it's a list
+        lstm = future_df['LSTM_Prediction'].tolist()  # Ensure it's a list
+
+        # Check if lists are populated
+        print(f"Labels: {labels}")
+        print(f"ARIMA predictions: {arima}")
+        print(f"LSTM predictions: {lstm}")
+
+        # Prepare the chart data
+        chart_data = {
+            "labels": labels,
+            "arima": arima,
+            "lstm": lstm
+        }
+
+        return JsonResponse(chart_data)
+
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")  # Log the error
+        data = fetch_data_from_yf(symbol, period, interval)
+        print("Fetched Data:", data)
+
+        # Check if the data is valid
+        if isinstance(data, pd.DataFrame) and 'timestamp' in data and 'Close' in data:
+            labels = data['timestamp'].dt.strftime('%d/%m/%Y').tolist()
+            close_prices = data['Close'].tolist()
+        else:
+            return JsonResponse({'error': 'Invalid data format or missing columns'}, status=400)
+
+        # Prepare the chart data
+        chart_data = {
+            'symbol': symbol,
+            'labels': labels,
+            'data': close_prices,
+            'last_price':round(close_prices[-1], 2)
+        }
+        return JsonResponse(chart_data)
+
+
+def explain_indicators(df, source=""):
+
+    explanations = {}
+
+    def add_explanation(indicator, value, explanation, feeling):
+        explanations[indicator] = {
+            'value': value,
+            'description': explanation,
+            'feeling': feeling
+        }
+
+    """
+    Explain the indicators and provide a rationale for whether the signal is Positive, Negative, or Neutral.
+    """
+    latest_data = df.tail().iloc[-1]
+    print(f"\n{source} Indicator Explanation:")
+
+    # Moving Averages
+    print(f"SMA_20: {latest_data['SMA_20']:.2f} (20-day Moving Average)")
+    add_explanation('SMA_20', round(latest_data['SMA_20'],2),
+        "The current price is above the 20-day moving average- Positive signal.",
+        "Positive" if latest_data['Close'] > latest_data['SMA_20'] else "Negative")
+
+    if latest_data['Close'] > latest_data['SMA_20']:
+        print("The current price is above the 20-day moving average- Positive signal.")
+    else:
+        print("The current price is beLow the 20-day moving average- Negative signal.")
+
+    # RSI
+    if latest_data['RSI'] < 30:
+        add_explanation('RSI', round(latest_data['RSI'],2), "RSI is beLow 30, stock might be oversold- Positive signal.", "Positive")
+    elif latest_data['RSI'] > 70:
+        add_explanation('RSI', round(latest_data['RSI'],2), "RSI is above 70, stock might be overbought- Negative signal.", "Negative")
+    else:
+        add_explanation('RSI', round(latest_data['RSI'],2), "RSI is between 30 and 70- Neutral stance.", "Neutral")
+
+    print(f"RSI: {latest_data['RSI']:.2f} (Relative Strength Index)")
+    
+    # MACD
+    print(f"MACD: {latest_data['MACD']:.2f}")
+    add_explanation('MACD', round(latest_data['MACD'],2), 
+        "MACD is above the signal line,- Positive momentum signal.",
+        "Positive" if latest_data['MACD'] > latest_data['MACD_Signal'] else "Negative")
+
+    print(f"MACD Signal Line: {latest_data['MACD_Signal']:.2f}")
+
+
+    # Bollinger Bands
+    print(f"Bollinger Upper Band: {latest_data['BBU_20']:.2f}")
+    print(f"Bollinger Lower Band: {latest_data['BBU_20']:.2f}")
+    if latest_data['Close'] < latest_data['BBL_20']:
+        add_explanation('Bollinger_Lower', round(latest_data['Close'],2), "Price is beLow Lower Bollinger Band, -Positive buying opportunity.", "Positive")
+    elif latest_data['Close'] > latest_data['BBU_20']:
+        add_explanation('Bollinger_Upper', round(latest_data['Close'],2), "Price is above upper Bollinger Band- overbought condition- Negative.", "Negative")
+    else:
+        add_explanation('Bollinger_Upper', round(latest_data['Close'],2), "Price is within the Bollinger Bands, Neutral outlook.", "Neutral")
+        add_explanation('Bollinger_Lower', round(latest_data['Close'],2), "Price is within the Bollinger Bands, Neutral outlook.", "Neutral")
+
+    # ATR (Volatility)
+    print(f"ATR: {latest_data['ATR']:.2f} (Average True Range)")
+    add_explanation('ATR', round(latest_data['ATR'],2), 
+        "High ATR suggests increased volatility, which can be a risk factor.",
+        "Negative" if latest_data['ATR'] > df['ATR'].mean() else "Positive")
+
+    if latest_data['ATR'] > df['ATR'].mean():
+        print("High ATR suggests increased volatility, which can be a risk factor.")
+    else:
+        print("Low ATR suggests Lower volatility, which could imply stability.")
+
+    # Average True Range Components
+    print(f"High-Low: {latest_data['High-Low']:.2f}")
+    print(f"High-Close: {latest_data['High-Close']:.2f}")
+    print(f"Low-Close: {latest_data['Low-Close']:.2f}")
+    print(f"True Range: {latest_data['True_Range']:.2f}")
+    add_explanation('High-Low', latest_data['High-Low'], "Difference between the High and Low prices of the day.", "Neutral")
+    add_explanation('High-Close', latest_data['High-Close'], "Difference between the High price and the previous Close price.", "Neutral")
+    add_explanation('Low-Close', latest_data['Low-Close'], "Difference between the Low price and the previous Close price.", "Neutral")
+    add_explanation('True_Range', latest_data['True_Range'], "Maximum of High-Low, High-Close, and Low-Close - represents volatility.", "Neutral")
+
+    # Volume
+    try:
+        print(f"Volume: {latest_data['Volume']:.2f}")
+        add_explanation('Volume', round(latest_data['Volume'],2), 
+            "Volume measures the total number of shares traded during a specific period. High volume indicates strong investor interest, while Low volume may indicate weak interest.",
+            "Positive" if latest_data['Volume'] > df['Volume'].mean() else "Negative")
+
+    except:
+        pass    
+
+    # Volatility
+    print(f"Volatility: {latest_data['Volatility']:.2f}")
+    add_explanation('Volatility', latest_data['Volatility'], 
+        "Volatility measures the dispersion of returns. High volatility suggests more risk and price fluctuations, while Low volatility suggests stability.",
+        "Negative" if latest_data['Volatility'] > df['Volatility'].mean() else "Positive")
+
+    # EMA-12 and EMA-26 Combined
+    print(f"EMA-12: {latest_data['EMA_12']:.2f}")
+    print(f"EMA-26: {latest_data['EMA_26']:.2f}")
+    if latest_data['EMA_12'] > latest_data['EMA_26']:
+        add_explanation('EMA_12_26', None, 
+            "EMA-12 is above EMA-26 indicating a bullish trend, suggesting potential upward momentum.", 
+            "Positive")
+    else:
+        add_explanation('EMA_12_26', None, 
+            "EMA-12 is beLow EMA-26 indicating a bearish trend, suggesting potential downward momentum.", 
+            "Negative")
+
+    # P/E Ratio
+    if latest_data['pe-ratio']:
+        add_explanation('pe-ratio', latest_data['pe-ratio'], 
+            "A Low P/E ratio might indicate that the stock is undervalued- Positive signal.",
+            "Positive" if latest_data['pe-ratio'] < 20 
+            else "Negative" if latest_data['pe-ratio'] > 30 
+            else "Neutral")
+        print(f"P/E Ratio: {latest_data['pe-ratio']:.2f}")
+            
+
+    return explanations
+
+
+@login_required
+def portfolio_view(request):
+    update_market_prices()
+    portfolio = Portfolio.objects.filter(user=request.user)
+    total_value = sum(item.current_value for item in portfolio)
+    total_profit_loss = sum(item.profit_loss for item in portfolio)
+    
+    asset_type_counts = {}
+    for item in portfolio:
+        asset_type = item.asset_type
+        asset_type_counts[asset_type] = asset_type_counts.get(asset_type, 0) + item.current_value
+
+    asset_types = list(asset_type_counts.keys())
+    asset_percentages = [round((value / total_value) * 100, 2) for value in asset_type_counts.values()]
+
+    # Example: Portfolio Performance Data
+    performance_data = PortfolioPerformance.objects.order_by("date")
+    performance_dates = [entry.date.strftime("%Y-%m-%d") for entry in performance_data]
+    performance_values = [entry.total_value for entry in performance_data]
+    
+    context = {
+        'portfolio': portfolio,
+        'total_value': total_value,
+        'total_profit_loss': total_profit_loss,
+        'asset_types': asset_types,
+        'asset_percentages': asset_percentages,
+        'performance_dates': performance_dates,
+        'performance_values': performance_values,
+    }
+    
+    return render(request, 'home/portfolio_view.html', context)
+
+from django.http import JsonResponse
+
+@login_required
+def portfolio_data(request):
+    update_market_prices()
+    update_portfolio_performance()
+    hourly_portfolio_snapshot()
+    portfolio = Portfolio.objects.filter(user=request.user)
+    total_value = sum(item.current_value for item in portfolio)
+    total_profit_loss = sum(item.profit_loss for item in portfolio)
+    
+    asset_type_counts = {}
+    for item in portfolio:
+        asset_type = item.asset_type
+        asset_type_counts[asset_type] = asset_type_counts.get(asset_type, 0) + item.current_value
+
+    asset_types = list(asset_type_counts.keys())
+    asset_percentages = [round((value / total_value) * 100, 2) for value in asset_type_counts.values()]
+
+    # Example: Portfolio Performance Data
+    performance_data = PortfolioPerformance.objects.filter(user=request.user).order_by("date")
+    performance_dates = [entry.date.strftime("%Y-%m-%d") for entry in performance_data]
+    performance_values = [entry.total_value for entry in performance_data]
+    print('*************** i found assets ***************')
+    print(performance_data)
+    data = {
+        'portfolio': list(portfolio.values()),
+        'total_value': total_value,
+        'total_profit_loss': total_profit_loss,
+        'asset_types': asset_types,
+        'asset_percentages': asset_percentages,
+        'performance_dates': performance_dates,
+        'performance_values': performance_values,
+    }
+    
+    return JsonResponse(data)
+
+
+@login_required
+def add_transaction(request):
+    if request.method == 'POST':
+        form = TransactionForm(request.POST)
+        if form.is_valid():
+            transaction = form.save(commit=False)
+            transaction.user = request.user  # Associate with the logged-in user
+            transaction.save()
+
+            # Add success message after successful form submission
+            messages.success(request, 'Transaction added successfully!')
+            return redirect('portfolio_view')  # Redirect to another page (like portfolio view)
+        else:
+            # Add error message if form is invalid after submission
+            logger.debug("Form errors: %s", form.errors) #hbar sui xrp trx avax filecoi crcoin pino
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = TransactionForm()
+
+    return render(request, 'home/add_transaction.html', {'form': form})
+
+@login_required
+def transactions(request):
+    print("Entered transactions view")  # Ensure this appears in the logs
+    transactions = Transaction.objects.filter(user=request.user)
+    print(f"Assets count: {transactions.count()}")  # Verify assets are being retrieved
+    context = {
+        'transactions': transactions,
+        'cc': 'CC i love u',
+    }
+    return render(request, 'home/transactions.html', context)
+
+
+@shared_task
+def update_market_prices():
+    # Get all portfolio items
+    portfolio = Portfolio.objects.all()
+
+    for item in portfolio:
+        try:
+            # Retrieve current market price from Yahoo Finance
+            ticker = item.ticker
+            stock = yf.Ticker(ticker)
+            
+            # Retrieve stock data and handle missing data
+            stock_history = stock.history(period='1d')
+            if stock_history.empty:
+                print(f"No data found for {ticker}")
+                continue  # Skip this iteration if no data is returned
+
+            current_price = Decimal(stock_history['Close'].iloc[-1])  # Convert price to Decimal
+
+            # Calculate the current value and ensure it's a Decimal calculation
+            current_value = current_price * Decimal(item.total_quantity)
+
+            # Debug output to verify calculations
+            print(f"Updating {item.ticker}: Price = {current_price}, Quantity = {item.total_quantity}, Value = {current_value}")
+
+            # Update the database with the new price and value
+            item.current_market_price = current_price
+            item.current_value = current_value  # Update current value
+            item.save()  # Save changes to the database
+
+            # Log successful update
+            print(f"Successfully updated {item.ticker} with value {current_value}")
+
+        except Exception as e:
+            print(f"Error updating price for {item.ticker}: {e}")
+
+
+
+def fetch_details(request, ticker):
+    try:
+        stock = yf.Ticker(ticker)
+        stock_history = stock.history(period='1d')
+        name = stock.info.get('shortName', 'N/A')
+        asset_type = stock.info.get('quoteType', 'Unknown')  # Retrieve the asset type
+        current_price = Decimal(stock_history['Close'].iloc[-1]) 
+        return JsonResponse({'name': name, 'asset_type': asset_type, 'current_price': current_price})
+    except Exception as e:
+        return JsonResponse({'error': str(e), 'name': 'N/A', 'asset_type': 'Unknown'})
+    
+
+def fetch_chart_data(request, ticker):
+    try:
+        # Fetch historical data for the past year
+        stock_data = yf.Ticker(ticker).history(period="1y", interval="1d")
+        if stock_data.empty:
+            return JsonResponse({"error": f"No data found for ticker '{ticker}'."})
+
+        # Format the data for the chart
+        dates = stock_data.index.strftime('%Y-%m-%d').tolist()
+        prices = stock_data['Close'].tolist()
+
+        return JsonResponse({"dates": dates, "prices": prices})
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to fetch data: {str(e)}"})
+    
+
+@login_required
+def asset_category_performance_data(request):
+    user = request.user
+    performance_data = (
+        AssetCategoryPerformance.objects.filter(user=user)
+        .order_by('date', 'asset_type')
+    )
+    data = {}
+    for item in performance_data:
+        if item.asset_type not in data:
+            data[item.asset_type] = {"dates": [], "values": []}
+        data[item.asset_type]["dates"].append(item.date.strftime('%Y-%m-%d'))
+        data[item.asset_type]["values"].append(float(item.total_value))
+
+    return JsonResponse({"performance_data": data})
+
+
+    '''
+    redis-server
+celery -A core worker --loglevel=info
+celery -A core beat --loglevel=info
+'''
+
+result = my_task.delay(3, 5)
+update_portfolio=update_portfolio_performance()
+update_portfolio_values=hourly_portfolio_snapshot()
+
+
+from django.http import JsonResponse
+
+def create_charts_p(request,ticker):
+    period = '1y'
+    interval = '1d'
+    symbol = ticker
+    data = fetch_data_from_yf(symbol, period, interval)
+    if data is None or data.empty:
+        print(f"No data available for {symbol} with period {period} and interval {interval}")
+        return
+
+
+    # Calculate indicators
+    data = calculate_indicators(data)
+
+    # Create traces for plotly
+    traces = []
+
+    # Closing price trace
+    traces.append(go.Scatter(x=data['timestamp'], y=data['Close'], mode='lines', name='Close', line=dict(color='#00B2E2')))
+
+    # Bollinger Bands traces
+    traces.append(go.Scatter(x=data['timestamp'], y=data['BBU_20'], mode='lines', name='Bollinger Upper Band', line=dict(color='red', dash='dash')))
+    traces.append(go.Scatter(x=data['timestamp'], y=data['BBL_20'], mode='lines', name='Bollinger Lower Band', line=dict(color='red', dash='dash')))
+
+    # Moving Averages traces
+    traces.append(go.Scatter(x=data['timestamp'], y=data['SMA_20'], mode='lines', name='MA 20', line=dict(color='green')))
+    traces.append(go.Scatter(x=data['timestamp'], y=data['SMA_50'], mode='lines', name='MA 50', line=dict(color='orange')))
+    traces.append(go.Scatter(x=data['timestamp'], y=data['SMA_200'], mode='lines', name='MA 200', line=dict(color='purple')))
+
+    # Create figure
+    fig = go.Figure(data=traces)
+
+    # Update layout for interactive features
+    fig.update_layout(
+        title=f'{symbol} - {period} {interval}',
+        xaxis_title=f'Date: {data["timestamp"].iloc[-1].strftime("%Y-%m-%d %H:%M:%S")}',
+        yaxis_title='Value',
+        template='plotly_dark',  # Dark theme
+        hovermode='x unified'
+    )
+
+    # Show the plot
+    fig.show()
+

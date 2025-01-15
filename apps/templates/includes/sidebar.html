@@ -6,10 +6,10 @@
         <div class="sidebar-wrapper">
             <div class="logo">
                 <a href="javascript:void(0)" class="simple-text logo-mini">
-                    CT
+                    Financial
                 </a>
                 <a href="javascript:void(0)" class="simple-text logo-normal">
-                    Creative Tim
+                    
                 </a>
             </div>
             <ul class="nav">
@@ -19,6 +19,24 @@
                         <p>Dashboard</p>
                     </a>
                 </li>
+                <li class="{% if 'icons' in segment %} active {% endif %}">
+                    <a href="{% url 'portfolio_view' %}">
+                        <i class="tim-icons icon-atom"></i>
+                        <p>Portfolio</p>
+                    </a>
+                </li>               
+                <li class="{% if 'icons' in segment %} active {% endif %}">
+                    <a href="{% url 'add_transaction' %}">
+                        <i class="tim-icons icon-atom"></i>
+                        <p>Add Transaction</p>
+                    </a>
+                </li>
+                <li class="{% if 'icons' in segment %} active {% endif %}">
+                    <a href="{% url 'transactions' %}">
+                        <i class="tim-icons icon-atom"></i>
+                        <p>Transactions</p>
+                    </a>
+                </li>                
                 <li class="{% if 'icons' in segment %} active {% endif %}">
                     <a href="/icons.html">
                         <i class="tim-icons icon-atom"></i>

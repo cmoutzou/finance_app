@@ -1,28 +1,53 @@
-version: '3.8'
+
 services:
-  appseed-app:
+  appseed-app:  # Updated service name to match your command
     container_name: appseed_app
     restart: always
-    env_file: .env
     build: .
+    env_file: .env  # Ensure your .env file has the necessary environment variables
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
     networks:
       - db_network
       - web_network
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    command: python manage.py runserver 0.0.0.0:8000
+
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: finance_db
+      POSTGRES_USER: root  # Replace with your actual username
+      POSTGRES_PASSWORD: root  # Replace with your actual password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - db_network
+
   nginx:
     container_name: nginx
     restart: always
-    image: "nginx:latest"
+    image: nginx:latest
+    platform: linux/amd64
     ports:
-      - "5085:5085"
+      - "5085:80"  # Nginx serves on port 80
     volumes:
       - ./nginx:/etc/nginx/conf.d
     networks:
       - web_network
-    depends_on: 
+    depends_on:
       - appseed-app
+
+volumes:
+  postgres_data: {}  # Volume for PostgreSQL data
+  static_volume: {}  # Volume for static files
+
 networks:
   db_network:
     driver: bridge
   web_network:
     driver: bridge
- 

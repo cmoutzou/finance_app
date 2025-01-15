@@ -14,15 +14,11 @@
                     <div class="card-header ">
                         <div class="row">
                             <div class="col-sm-6 text-left">
-                                <h5 class="card-category">Total Shipments</h5>
-                                <select id="ticker-select" class="form-control float-right inherit-dropdown" style="width: 200px; margin-left: 10px; background-color: #1e1e2f;">
-                                    <option value="AAPL">AAPL</option>
-                                    <option value="GOOGL">GOOGL</option>
-                                    <option value="MSFT">MSFT</option>
-                                    <option value="TSLA">TSLA</option>
-                                </select>
+                                <h5 class="card-category">Financial Analysis</h5>
+                                <input id="ticker-select" type="text"  class="form-control float-right inherit-dropdown" style="width: 200px; margin-left: 10px; background-color: #1e1e2f;" placeholder="Enter ticker" value="AAPL"></input>
+                                   
                                 <h2 class="card-title" id="stock_val">Performance</h2>
-                                <button class="btn btn-sm btn-outline-primary create-chart-btn">Create Chart</button>
+                                <button id='primary-chart' class="btn btn-sm btn-outline-primary create-chart-btn">Create Chart</button>
                             </div>
                             <div class="col-sm-6">
                                 <div class="btn-group btn-group-toggle float-right" data-toggle="buttons">
@@ -64,10 +60,11 @@
                 <div class="card card-chart">
                     <div class="card-header">
                         <h5 class="card-category">S&P500</h5>
-                        <h3 class="card-title" id="sp500val"><i class="tim-icons icon-bell-55 text-primary sp"></i> 763,215</h3>
+                        <h3 class="card-title" id="sp500val"><i class="tim-icons icon-bell-55 text-primary sp"></i> </h3>
                     </div>
                     <div class="card-body">
                         <div class="chart-area">
+                        <div><br></div>
                             <canvas id="chartLinePurple"></canvas>
                         </div>
                     </div>
@@ -76,11 +73,12 @@
             <div class="col-lg-4">
                 <div class="card card-chart">
                     <div class="card-header">
-                        <h5 class="card-category">Daily Sales</h5>
-                        <h3 class="card-title"><i class="tim-icons icon-delivery-fast text-info"></i> 3,500€</h3>
+                        <h5 class="card-category">Future Price predict</h5>
+                        <h3 class="card-title"><i class="tim-icons icon-delivery-fast text-info"></i> </h3>
                     </div>
                     <div class="card-body">
                         <div class="chart-area">
+                            <button id='predict-btn' class="btn btn-sm btn-outline-primary">Prediction</button>
                             <canvas id="CountryChart"></canvas>
 
                         </div>
@@ -90,12 +88,50 @@
             <div class="col-lg-4">
                 <div class="card card-chart">
                     <div class="card-header">
-                        <h5 class="card-category">Completed Tasks</h5>
-                        <h3 class="card-title"><i class="tim-icons icon-send text-success"></i> 12,100K</h3>
+                        <h5 class="card-category">Financial Indicators</h5>
                     </div>
                     <div class="card-body">
-                        <div class="chart-area">
-                            <canvas id="chartLineGreen"></canvas>
+                        <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
+                            <table class="table tablesorter " id="">
+                                <thead class=" text-primary">
+                                <tr>
+                                    <th>
+                                        Indicator
+                                    </th>
+                                    <th>
+                                        Value
+                                    </th>                                   
+                                    <th>
+                                        Description
+                                    </th>
+                                    <th class="text-center">
+                                        Suggestion
+                                    </th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                    {% for key,data in explanations.items %}
+                                <tr>
+                                    <td>
+                                        <a href="#">
+                                            {{key |default:"N/A"}}</a>
+                                    </td>
+                                    <td> <a href="#">
+                                        {{data.value |default:"N/A"}}</a>
+                                    </td>
+                                    <td> <a href="#">
+                                        {{data.description |default:"N/A"}}</a>
+                                    </td>                                    
+                                    <td> <a href="#">
+                                        {{data.feeling |default:"N/A"}}</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% if not macro_data %}
+                                    <tr><td colspan="5">No macroeconomic data available.</td></tr>
+                                {% endif %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -330,7 +366,7 @@
                     myChart.update();
                     updateStockPerformance(data.ticker, data.last_price);
                     updateChartLinePurple(ticker, period, interval);
-                    updateCountryChart(ticker, period, interval); // Ensure this is called here
+                    updateCountryChart(ticker, period, interval); 
                 })
                 .catch(error => console.log('Error fetching chart data:', error));
         }
@@ -340,9 +376,8 @@
             document.getElementById("stock_val").innerHTML = `<i class="tim-icons icon-bell-55 text-primary"></i> ${ticker} : ${last_price}`;
         }
     
-        const defaultTicker = $('#ticker-select option:first').val();
+        const defaultTicker = $('#ticker-select option:first').val() || 'AAPL';
         updateChartData(defaultTicker, '1y', '1d');
-        //updateChartLinePurple(defaultTicker, '1y', '1d');
     
         $('input[name="options"]').on('change', function () {
             const selectedOption = $(this).parent().attr('id');
@@ -369,49 +404,60 @@
     
             updateChartData(ticker, period, interval);
         });
-    
-        $('.create-chart-btn').on('click', function () {
-            const activeRadio = $('.btn-group-toggle .btn.active');
-            const selectedOption = activeRadio.attr('id');
-            const ticker = $('#ticker-select').val();
-            let period, interval;
-    
-            switch (selectedOption) {
-                case '0':
-                    period = '1y';
-                    interval = '1d';
-                    break;
-                case '1':
-                    period = '1mo';
-                    interval = '1d';
-                    break;
-                case '2':
-                    period = '1d';
-                    interval = '1h';
-                    break;
-                default:
-                    period = '1y';
-                    interval = '1d';
+ 
+        // Create Charts Button
+document.getElementById('primary-chart').addEventListener('click', function() {
+    const ticker = document.getElementById('ticker-select').value || 'GOOGL'; // Default to GOOGL if no ticker selected
+    const period = '1y'; // You can customize this as needed
+    const interval = '1d'; // You can customize this as needed
+
+    // Construct the URL for the create_charts view
+    const url = `/create_charts/?ticker=${ticker}&period=${period}&interval=${interval}`;
+
+    // Make an AJAX call to fetch the charts
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
             }
-    
-            $.ajax({
-                url: '/create_charts/',
-                type: 'GET',
-                data: {
-                    ticker: ticker,
-                    period: period,
-                    interval: interval,
-                    csrfmiddlewaretoken: '{{ csrf_token }}'
-                },
-                success: function (response) {
-                    updateStockPerformance(response.ticker, response.last_price);
-                    console.log(response);
-                },
-                error: function (xhr, status, error) {
-                    console.error('Error:', error);
-                }
-            });
+            return response.json(); // Assuming the server returns JSON
+        })
+        .then(data => {
+            // Handle the response if needed
+            console.log(data);
+        })
+        .catch(error => {
+            console.error('There has been a problem with your fetch operation:', error);
         });
+});
+
+// Predict Button
+document.getElementById('predict-btn').addEventListener('click', function() {
+    const ticker = document.getElementById('ticker-select').value || 'GOOGL'; // Default to GOOGL if no ticker selected
+    const period = '1y'; // You can customize this as needed
+    const interval = '1d'; // You can customize this as needed
+
+    // Construct the URL for the plot_prediction view
+    const url = `/plot_prediction/?ticker=${ticker}&period=${period}&interval=${interval}`;
+
+    // Make an AJAX call to fetch the prediction
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json(); // Assuming the server returns JSON
+        })
+        .then(data => {
+            // Handle the response if needed
+            console.log(data);
+        })
+        .catch(error => {
+            console.error('There has been a problem with your fetch operation:', error);
+        });
+});
+
+        ///////////////////////////////////////////////
     
         $('#ticker-select').on('change', function () {
             const selectedTicker = $(this).val();
@@ -472,50 +518,140 @@
                 .catch(error => console.log('Error fetching chartLinePurple data:', error));
         }
     
-        function updateCountryChart(ticker, period, interval) {
-            fetch(`{% url 'get_CountryChart_data' %}?ticker=${ticker}&period=${period}&interval=${interval}`)
-            .then(response => response.json())
-            .then(data => {
-                console.log('Fetched data:', data);  // Log the fetched data for debugging
-                if (data.error) {
-                    console.error('Error fetching data for chartCountry:', data.error);
-                    return;
-                }
-                if (!CountryChart) {
-                    const CountryChartline = document.getElementById('CountryChart').getContext('2d');                    
-                    CountryChart = new Chart(CountryChartline, {
-                        type: 'line',
-                        data: {
-                            labels: data.labels,
-                            datasets: [{
-                                label: "Close Prices",
-                                backgroundColor: 'rgba(66, 134, 121, 0.6)',
-                                borderColor: '#d346b1',
-                                data: data.data,  // Should now be an array of numbers
-                            }]
+        function updateCountryChart(data) {
+            const ctx = document.getElementById('myChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'ARIMA Prediction',
+                        data: data.arima,
+                        borderColor: 'purple',
+                        fill: false,
+                    }, {
+                        label: 'LSTM Prediction',
+                        data: data.lstm,
+                        borderColor: 'orange',
+                        fill: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            type: 'time',  // or 'linear' depending on your data
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
                         },
-                        options: gradientChartOptionsConfigurationWithTooltipPurple
-                    });
-                } else {
-                    CountryChart.data.labels = data.labels;
-                    CountryChart.data.datasets[0].data = data.data;  // Update with the new data
-                    CountryChart.update();
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Price'
+                            }
+                        }
+                    }
                 }
-            })
-            .catch(error => console.log('Error fetching CountryChart data:', error));
+            });
         }
+        
     });
     
     
 </script>
+<script>
+    function updateSpecificGraph(chartId) {
+        fetch('/get_predictions/')
+            .then(response => response.json())
+            .then(data => {
+                let arimaData = data.arima_predictions;
+                let lstmData = data.lstm_predictions;
+                
+                // Target the specific chart by its ID
+                updateChart(chartId, arimaData, lstmData);
+            });
+    }
+    
+    function updateChart(chartId, arimaData, lstmData) {
+        let ctx = document.getElementById(chartId).getContext('2d');
+        
+        // Create or update the specific chart
+        let chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Label1', 'Label2', 'Label3'], // Dynamic labels if needed
+                datasets: [
+                    {
+                        label: 'ARIMA Predictions',
+                        data: arimaData,
+                        borderColor: 'rgba(255,99,132,1)',
+                        borderWidth: 1,
+                        fill: false
+                    },
+                    {
+                        label: 'LSTM Predictions',
+                        data: lstmData,
+                        borderColor: 'rgba(54,162,235,1)',
+                        borderWidth: 1,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    x: { display: true },
+                    y: { display: true }
+                }
+            }
+        });
+    }
+    
+    // Call the function for the specific chart with its ID
+    window.onload = function() {
+        //alert('Page loaded, waiting for 30 seconds...');
+    
+        // Set a delay of 30 seconds (30000 milliseconds)
+        setTimeout(function() {
+            //alert('Starting to update charts after 30 seconds...');
+    
+            // Ensure the functions are being called
+            console.log('updateSpecificGraph called');
+            updateSpecificGraph('CountryChart');
+    
+            console.log('updateStockPerformance called with:', data.ticker, data.last_price);
+            updateStockPerformance(data.ticker, data.last_price);
+    
+            console.log('updateChartLinePurple called with:', ticker, period, interval);
+            updateChartLinePurple(ticker, period, interval);
+            
+        }, 30000);  // 30 seconds delay
+    }
 
+    </script>
+    
 
-
-
-
-
-
-
-
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tickerSelect = document.getElementById('ticker-select');
+            const customTickerInput = document.getElementById('custom-ticker');
+        
+            // Show the custom ticker input when 'Other...' option is selected
+            tickerSelect.addEventListener('change', function() {
+                if (tickerSelect.value === 'other') {
+                    customTickerInput.style.display = 'block';
+                    customTickerInput.value = ''; // Clear the input
+                } else {
+                    customTickerInput.style.display = 'none';
+                }
+            });
+        
+            // Optionally, you can handle the input field behavior (for validation, etc.)
+            customTickerInput.addEventListener('input', function() {
+                // You can add any behavior you need for custom ticker input here
+            });
+        });
+        </script>
 
 {% endblock javascripts %}

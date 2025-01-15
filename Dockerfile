@@ -1,18 +1,27 @@
-FROM python:3.9
+# Base image
+FROM python:3.12
 
-# set environment variables
+# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-COPY requirements.txt .
-# install python dependencies
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+# Set work directory
+WORKDIR /app
 
-COPY . .
+# Install dependencies
+COPY requirements.txt /app/
+RUN apt-get update && apt-get install -y default-libmysqlclient-dev && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install mysqlclient
 
-# running migrations
-RUN python manage.py migrate
+# Copy project files
+COPY . /app/
 
-# gunicorn
-CMD ["gunicorn", "--config", "gunicorn-cfg.py", "core.wsgi"]
+# Collect static files
+RUN python manage.py collectstatic --noinput
+
+# Expose port 8000
+EXPOSE 8000
+
+# Run the Django development server
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

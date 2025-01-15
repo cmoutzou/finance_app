@@ -1,0 +1,166 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Add Asset {% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center">Add Transaction</h1>
+
+    <form id="add_transaction" action="{% url 'add_transaction' %}" method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-success">Add Transaction</button>
+    </form>
+
+    <!-- Success message (Only show after form is successfully submitted) -->
+    {% if messages %}
+        <div class="alert alert-success mt-3">
+            <ul>
+                {% for message in messages %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <!-- Error messages (Only show if form is not valid after POST submission) -->
+    {% if form.errors and request.method == 'POST' %}
+        <div class="alert alert-danger mt-3">
+            <ul>
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+</div>
+ <!-- Chart Section -->
+ <div id="chart-container" class="mt-5">
+    <h2 class="text-center">Ticker Performance (1Y 1D)</h2>
+    <div id="chart" style="width:100%; height:500px;"></div>
+    <p id="chart-error" class="text-danger text-center" style="display: none;">No data available for the entered ticker.</p>
+</div>
+</div>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tickerInput = document.getElementById('id_ticker');
+    const chartContainer = document.getElementById('chart');
+    const chartError = document.getElementById('chart-error');
+
+    tickerInput.addEventListener('input', function() {
+        tickerInput.value = tickerInput.value.toUpperCase();
+        const ticker = tickerInput.value.trim();
+
+        if (ticker.length >= 1) {
+            // Fetch data for the chart
+            fetch(`/fetch-chart-data/${ticker}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        chartError.style.display = 'block';
+                        chartContainer.style.display = 'none';
+                    } else {
+                        chartError.style.display = 'none';
+                        chartContainer.style.display = 'block';
+
+                        // Render the chart with Plotly
+                        Plotly.newPlot(chartContainer, [{
+                            x: data.dates,
+                            y: data.prices,
+                            type: 'scatter',
+                            mode: 'lines',
+                            line: {
+                                color: '#00FF00',
+                                width: 2
+                            },
+                            name: ticker
+                        }], {
+                            title: `${ticker} 1Y 1D Performance`,
+                            paper_bgcolor: '#121212',
+                            plot_bgcolor: '#121212',
+                            font: {
+                                color: '#FFFFFF'
+                            },
+                            xaxis: {
+                                title: 'Date',
+                                gridcolor: '#444'
+                            },
+                            yaxis: {
+                                title: 'Price',
+                                gridcolor: '#444'
+                            }
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching chart data:', error);
+                    chartError.style.display = 'block';
+                    chartContainer.style.display = 'none';
+                });
+        } else {
+            chartContainer.style.display = 'none';
+            chartError.style.display = 'none';
+        }
+    });
+});
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const transactionTypeInput = document.getElementById('id_transaction_type');
+        const buyPriceLabel = document.querySelector('label[for="id_buy_price"]');
+
+        transactionTypeInput.addEventListener('change', function() {
+            if (transactionTypeInput.value === 'Sell') {
+                buyPriceLabel.textContent = 'Sell Price';
+            } else {
+                buyPriceLabel.textContent = 'Buy Price';
+            }
+        });
+
+        const tickerInput = document.getElementById('id_ticker');
+        const nameInput = document.getElementById('id_name');
+        const typeInput = document.getElementById('id_asset_type');
+        const currentprice = document.getElementById('id_buy_price');
+
+        tickerInput.addEventListener('input', function() {
+            const ticker = tickerInput.value.trim();
+            if (ticker.length >= 1) {
+                fetch(`/fetch-details/${ticker}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.name) {
+                            nameInput.value = data.name;  // Update the name field
+                        } else {
+                            nameInput.value = 'N/A';
+                        }
+
+                        if (data.asset_type) {
+                            typeInput.value = data.asset_type;  // Update the asset type field
+                        } else {
+                            typeInput.value = '';  // Clear if asset type is not found
+                        }
+                        if (data.current_price) {
+                        // Ensure data.current_price is a valid number
+                        const price = parseFloat(data.current_price);
+
+                        // Check if price is a valid number
+                        if (!isNaN(price)) {
+                            // Format price to 4 decimal places and set it in the input field
+                            currentprice.value = price.toFixed(4);
+                        } else {
+                            console.error('Invalid price received:', data.current_price);
+                            currentprice.value = '';  // Clear the price field if invalid
+                        }
+                    }
+                    })
+                    .catch(error => console.error('Error fetching details:', error));
+            }
+        });
+    });
+</script>
+
+{% endblock %}

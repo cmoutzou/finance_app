@@ -1,0 +1,21 @@
+# .env
+
+# Secret key for Django application
+SECRET_KEY=S#perS3crEt_007  # Change this to a more secure key in production
+
+# Debug mode (set to False in production)
+DEBUG=True
+
+# Database configuration for MySQL
+DB_ENGINE=mysql  # Change to 'mysql' for MySQL or remove this line for SQLite
+DB_NAME=appseed_db  # Name of your database
+DB_USERNAME=appseed_db_usr  # Database username
+DB_PASS=pass  # Database password
+DB_HOST=localhost  # Database host
+DB_PORT=3306  # Database port
+
+# Optional server configuration
+SERVER=127.0.0.1  # Change if you have a different server address
+
+# Assets root path
+ASSETS_ROOT=/static/assets
